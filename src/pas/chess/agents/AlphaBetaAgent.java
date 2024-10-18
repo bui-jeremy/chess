@@ -72,8 +72,57 @@ public class AlphaBetaAgent
                                            double alpha,
                                            double beta)
 		{
+			if (depth == 0 || node.isTerminal()) {
+				double heuristicValue = CustomHeuristics.getMaxPlayerHeuristicValue(node);
+				node.setMaxPlayerUtilityValue(heuristicValue);
+				return node;
+			}
+
 			DFSTreeNode bestChild = null;
-			return bestChild;
+			double bestValue;
+
+			boolean isMaxPlayer = node.getGame().getCurrentPlayer().equals(node.getMaxPlayer());
+
+			if (isMaxPlayer) {
+				bestValue = Double.NEGATIVE_INFINITY;
+				List<DFSTreeNode> children = CustomMoveOrderer.order(node.getChildren());
+
+				for (DFSTreeNode child : children) {
+					DFSTreeNode result = alphaBetaSearch(child, depth - 1, alpha, beta);
+
+					if (result.getMaxPlayerUtilityValue() > bestValue) {
+						bestValue = result.getMaxPlayerUtilityValue();
+						bestChild = child;
+					}
+
+					alpha = Math.max(alpha, bestValue);
+
+					if (alpha >= beta) {
+						break; 
+					}
+				}
+			} else {
+				bestValue = Double.POSITIVE_INFINITY;
+				List<DFSTreeNode> children = CustomMoveOrderer.order(node.getChildren());
+
+				for (DFSTreeNode child : children) {
+					DFSTreeNode result = alphaBetaSearch(child, depth - 1, alpha, beta);
+
+					if (result.getMaxPlayerUtilityValue() < bestValue) {
+						bestValue = result.getMaxPlayerUtilityValue();
+						bestChild = child;
+					}
+
+					beta = Math.min(beta, bestValue);
+
+					if (alpha >= beta) {
+						break; 
+					}
+				}
+			}
+
+			node.setMaxPlayerUtilityValue(bestValue);
+			return bestChild != null ? bestChild : node;
 		}
 
 		@Override
