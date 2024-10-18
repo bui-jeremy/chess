@@ -1,32 +1,28 @@
 package src.pas.chess.moveorder;
 
-
-// SYSTEM IMPORTS
 import edu.bu.chess.search.DFSTreeNode;
+import edu.bu.chess.game.Game;
+import edu.bu.chess.game.piece.Piece;
+import edu.bu.chess.game.piece.PieceType;
+import edu.bu.chess.game.player.Player;
+import edu.bu.chess.utils.Coordinate;
 
+import java.util.LinkedList;
 import java.util.List;
-
 
 // JAVA PROJECT IMPORTS
 import src.pas.chess.moveorder.DefaultMoveOrderer;
 
-public class CustomMoveOrderer
-    extends Object
-{
+public class CustomMoveOrderer extends Object {
 
-	/**
-	 * TODO: implement me!
-	 * This method should perform move ordering. Remember, move ordering is how alpha-beta pruning gets part of its power from.
-	 * You want to see nodes which are beneficial FIRST so you can prune as much as possible during the search (i.e. be faster)
-	 * @param nodes. The nodes to order (these are children of a DFSTreeNode) that we are about to consider in the search.
-	 * @return The ordered nodes.
-	 */
-	public static List<DFSTreeNode> order(List<DFSTreeNode> nodes) {
-        // please replace this!
+    /**
+     * This method orders the moves by prioritizing beneficial ones such as captures, checks, and promotions.
+     * @param nodes The nodes to order (these are children of a DFSTreeNode) that we are about to consider in the search.
+     * @return The ordered nodes.
+     */
+    public static List<DFSTreeNode> order(List<DFSTreeNode> nodes) {   
         List<DFSTreeNode> captureNodes = new LinkedList<>();
         List<DFSTreeNode> promotionNodes = new LinkedList<>();
-        List<DFSTreeNode> castlingNodes = new LinkedList<>();
-        List<DFSTreeNode> enPassantNodes = new LinkedList<>();
         List<DFSTreeNode> checkNodes = new LinkedList<>();
         List<DFSTreeNode> otherNodes = new LinkedList<>();
 
@@ -34,37 +30,30 @@ public class CustomMoveOrderer
             if (node.getMove() != null) {
                 switch (node.getMove().getType()) {
                     case CAPTUREMOVE:
-                        captureNodes.add(node);
+                        captureNodes.add(node);  // prioritize captures
                         break;
                     case PROMOTEPAWNMOVE:
-                        promotionNodes.add(node);
-                        break;
-                    case CASTLEMOVE:
-                        castlingNodes.add(node);
-                        break;
-                    case ENPASSANTMOVE:
-                        enPassantNodes.add(node);
+                        promotionNodes.add(node);  // prioritize promotions
                         break;
                     default:
                         if (isCheckMove(node)) {
-                            checkNodes.add(node);
+                            checkNodes.add(node);  // prioritize moves that check the king
                         } else {
-                            otherNodes.add(node);
+                            otherNodes.add(node);  // add the rest
                         }
                         break;
                 }
             } else {
-                otherNodes.add(node);
+                otherNodes.add(node);  // moves with no type
             }
         }
 
+        // Combine the prioritized moves
         captureNodes.addAll(promotionNodes);
-        captureNodes.addAll(enPassantNodes);
-        captureNodes.addAll(castlingNodes);
         captureNodes.addAll(checkNodes);
         captureNodes.addAll(otherNodes);
 
-        return captureNodes;  
+        return captureNodes;
     }
 
     /**
@@ -78,14 +67,12 @@ public class CustomMoveOrderer
 
         for (Piece piece : game.getBoard().getPieces(opponent, PieceType.KING)) {
             Coordinate kingPosition = game.getCurrentPosition(piece);
-
             for (Piece maxPlayerPiece : game.getBoard().getPieces(node.getMaxPlayer())) {
                 if (maxPlayerPiece.getAllCaptureMoves(game).contains(kingPosition)) {
-                    return true;  
+                    return true;
                 }
             }
         }
         return false;
     }
-
 }
