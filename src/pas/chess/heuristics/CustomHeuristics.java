@@ -20,16 +20,14 @@ public class CustomHeuristics
     extends Object
 {
 
-	// Heuristic for material balance: how many pieces each player has and their value
+	// Material balance: how many pieces each player has and their value
     private static double getMaterialBalance(DFSTreeNode node) {
         double score = 0.0;
 
-        // Max player's material
         for (Piece piece : node.getGame().getBoard().getPieces(DefaultHeuristics.getMaxPlayer(node))) {
             score += Piece.getPointValue(piece.getType());
         }
 
-        // Min player's material (subtracted)
         for (Piece piece : node.getGame().getBoard().getPieces(DefaultHeuristics.getMinPlayer(node))) {
             score -= Piece.getPointValue(piece.getType());
         }
@@ -37,14 +35,10 @@ public class CustomHeuristics
         return score;
     }
 
-    // Heuristic for evaluating king safety
+    // Evaluating king safety
     private static double evaluateKingSafety(DFSTreeNode node) {
         double score = 0.0;
-
-        // Max player's king safety
         score += evaluateKingSafetyForPlayer(node, DefaultHeuristics.getMaxPlayer(node));
-
-        // Min player's king safety (negatively weighted)
         score -= evaluateKingSafetyForPlayer(node, DefaultHeuristics.getMinPlayer(node));
 
         return score;
@@ -60,7 +54,6 @@ public class CustomHeuristics
         int friendlyPiecesNearby = 0;
         int enemyPiecesAttacking = 0;
 
-        // Check friendly pieces near the king
         for (Piece piece : game.getBoard().getPieces(player)) {
             if (piece.getType() != PieceType.KING) {
                 Coordinate pos = game.getCurrentPosition(piece);
@@ -71,33 +64,26 @@ public class CustomHeuristics
             }
         }
 
-        // Check enemy pieces attacking the king
         for (Piece enemyPiece : game.getBoard().getPieces(game.getOtherPlayer(player))) {
             if (enemyPiece.getAllCaptureMoves(game).contains(kingPos)) {
                 enemyPiecesAttacking++;
             }
         }
-
-        // Reward friendly pieces near the king
         score += friendlyPiecesNearby * 1.0;
-
-        // Penalize enemy pieces attacking the king
         score -= enemyPiecesAttacking * 3.0;
 
         return score;
     }
 
-    // Heuristic for evaluating piece mobility: how many moves each player can make
+    // Evaluating piece mobility: how many moves each player can make
     private static double evaluatePieceMobility(DFSTreeNode node) {
         double score = 0.0;
 
-        // Max player's mobility
         for (Piece piece : node.getGame().getBoard().getPieces(DefaultHeuristics.getMaxPlayer(node))) {
             int numMoves = piece.getAllMoves(node.getGame()).size();
             score += numMoves * 0.1;
         }
 
-        // Min player's mobility (negatively weighted)
         for (Piece piece : node.getGame().getBoard().getPieces(DefaultHeuristics.getMinPlayer(node))) {
             int numMoves = piece.getAllMoves(node.getGame()).size();
             score -= numMoves * 0.1;
@@ -106,7 +92,7 @@ public class CustomHeuristics
         return score;
     }
 
-    // Heuristic for center control: control over the central squares
+    // Center control: control over the central squares
     private static double evaluateCenterControl(DFSTreeNode node) {
         double score = 0.0;
         Coordinate[] centerSquares = {
@@ -128,42 +114,12 @@ public class CustomHeuristics
         return score;
     }
 
-    // Heuristic for pawn structure: evaluates doubled, isolated, and passed pawns
-    private static double evaluatePawnStructure(DFSTreeNode node) {
-        double score = 0.0;
-
-        // Evaluate max player's pawn structure
-        score += evaluatePawnFeatures(node, DefaultHeuristics.getMaxPlayer(node));
-
-        // Evaluate min player's pawn structure (negatively weighted)
-        score -= evaluatePawnFeatures(node, DefaultHeuristics.getMinPlayer(node));
-
-        return score;
+    
+    private static int getRemainingPieces(DFSTreeNode node) {
+        int remainingPieces = node.getGame().getBoard().getPieces(DefaultHeuristics.getMaxPlayer(node)).size() +
+                              node.getGame().getBoard().getPieces(DefaultHeuristics.getMinPlayer(node)).size();
+        return remainingPieces;
     }
-
-    // Helper method for evaluating pawn structure of a single player
-    private static double evaluatePawnFeatures(DFSTreeNode node, Player player) {
-        double score = 0.0;
-        Game game = node.getGame();
-        Map<Integer, Integer> pawnFiles = new HashMap<>();
-
-        // Count pawns on each file (for doubled and isolated pawns)
-        for (Piece pawn : game.getBoard().getPieces(player, PieceType.PAWN)) {
-            Coordinate pos = game.getCurrentPosition(pawn);
-            int file = pos.getXPosition();
-            pawnFiles.put(file, pawnFiles.getOrDefault(file, 0) + 1);
-        }
-
-        // Penalize doubled pawns
-        for (int count : pawnFiles.values()) {
-            if (count > 1) {
-                score -= (count - 1) * 0.5; // Penalize doubled pawns
-            }
-        }
-
-        return score;
-    }
-
     /**
 	 * TODO: implement me! The heuristics that I wrote are useful, but not very good for a good chessbot.
 	 * Please use this class to add your heuristics here! I recommend taking a look at the ones I provided for you
@@ -176,10 +132,15 @@ public class CustomHeuristics
         double kingSafety = evaluateKingSafety(node);
         double pieceMobility = evaluatePieceMobility(node);
         double centerControl = evaluateCenterControl(node);
-        double pawnStructure = evaluatePawnStructure(node);
+        int remainingPieces = getRemainingPieces(node);
 
-        // Combine the heuristic scores with appropriate weights
-        return materialBalance * 15.0 + kingSafety * 10.0 + pieceMobility * 0.5 + centerControl * 1.5 + pawnStructure * 0.5;
+        if (remainingPieces < 10) {
+            // focus more on material and king safety for end game
+            return materialBalance * 20.0 + kingSafety * 15.0 + pieceMobility * 0.3 + centerControl * 0.8;
+        } else {
+            // balance out the heuristics for the opening and middle game
+            return materialBalance * 15.0 + kingSafety * 10.0 + pieceMobility * 0.5 + centerControl * 1.5;
+        }
     }
 
 }
